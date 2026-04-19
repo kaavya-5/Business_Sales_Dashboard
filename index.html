@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Sales Analytics Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #0d0f14;
+  --surface: #13161d;
+  --card: #181c25;
+  --border: rgba(255,255,255,0.07);
+  --accent: #4f8ef7;
+  --accent2: #34d9a5;
+  --accent3: #f7934f;
+  --accent4: #b97af7;
+  --text: #e8eaf0;
+  --muted: #6b7280;
+  --danger: #f05f5f;
+  --success: #34d9a5;
+  --font-head: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-body);}
+body{min-height:100vh;padding:0;}
+
+/* ── TOP BAR ── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 32px;border-bottom:1px solid var(--border);
+  background:var(--surface);position:sticky;top:0;z-index:100;
+}
+.logo{font-family:var(--font-head);font-size:17px;font-weight:800;letter-spacing:-0.03em;color:var(--text);}
+.logo span{color:var(--accent);}
+.dataset-badge{
+  font-family:var(--font-mono);font-size:11px;color:var(--muted);
+  background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.18);
+  padding:4px 12px;border-radius:20px;display:flex;align-items:center;gap:6px;
+}
+.dataset-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+/* ── UPLOAD ZONE ── */
+#upload-section{
+  max-width:680px;margin:80px auto;padding:0 24px;text-align:center;
+  animation:fadeUp 0.5s ease;
+}
+.upload-eyebrow{font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:16px;}
+.upload-title{font-family:var(--font-head);font-size:38px;font-weight:800;line-height:1.1;margin-bottom:12px;letter-spacing:-0.03em;}
+.upload-title span{color:var(--accent);}
+.upload-sub{font-size:15px;color:var(--muted);line-height:1.6;margin-bottom:40px;}
+.drop-zone{
+  border:1.5px dashed rgba(79,142,247,0.4);border-radius:20px;
+  padding:52px 40px;background:rgba(79,142,247,0.03);
+  cursor:pointer;transition:all 0.25s;position:relative;
+}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:rgba(79,142,247,0.07);}
+.drop-icon{font-size:42px;margin-bottom:14px;opacity:0.6;}
+.drop-main{font-family:var(--font-head);font-size:18px;font-weight:600;margin-bottom:6px;}
+.drop-sub{font-size:13px;color:var(--muted);}
+.drop-sub b{color:var(--accent);cursor:pointer;}
+#file-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.format-pills{display:flex;gap:8px;justify-content:center;margin-top:20px;}
+.pill{font-family:var(--font-mono);font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);}
+
+/* ── UPLOAD PROGRESS ── */
+#upload-progress{
+  display:none;margin-top:24px;background:var(--card);
+  border:1px solid var(--border);border-radius:14px;padding:20px 24px;
+}
+.prog-label{font-size:13px;color:var(--muted);margin-bottom:10px;font-family:var(--font-mono);}
+.prog-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;width:0%;transition:width 0.4s ease;}
+
+/* ── DASHBOARD ── */
+#dashboard{display:none;padding:28px 32px;animation:fadeUp 0.4s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── HEADER ROW ── */
+.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.dash-title{font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.03em;}
+.dash-meta{font-size:12px;color:var(--muted);font-family:var(--font-mono);}
+.header-actions{display:flex;gap:10px;align-items:center;}
+
+/* ── UPLOAD AGAIN BTN ── */
+.upload-btn{
+  font-size:12px;padding:8px 16px;border-radius:10px;
+  border:1px solid rgba(79,142,247,0.4);background:rgba(79,142,247,0.08);
+  color:var(--accent);cursor:pointer;font-family:var(--font-mono);
+  position:relative;overflow:hidden;transition:all 0.2s;
+}
+.upload-btn:hover{background:rgba(79,142,247,0.15);border-color:var(--accent);}
+#file-input-dash{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+
+/* ── FILTERS ── */
+.filters{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
+.filter-select{
+  font-family:var(--font-mono);font-size:12px;padding:7px 14px;
+  border-radius:10px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);cursor:pointer;
+  appearance:none;outline:none;transition:border 0.2s;
+}
+.filter-select:hover,.filter-select:focus{border-color:rgba(79,142,247,0.5);}
+
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.kpi{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;padding:20px 22px;position:relative;overflow:hidden;
+  transition:transform 0.2s,border-color 0.2s;
+}
+.kpi::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--accent-kpi,var(--accent)),transparent);
+}
+.kpi:hover{transform:translateY(-2px);border-color:rgba(79,142,247,0.25);}
+.kpi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--font-mono);margin-bottom:10px;}
+.kpi-value{font-family:var(--font-head);font-size:28px;font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;}
+.kpi-sub{font-size:12px;color:var(--muted);}
+.kpi-sub.up{color:var(--success);}
+.kpi-sub.down{color:var(--danger);}
+
+/* ── CHART CARDS ── */
+.row{display:grid;gap:16px;margin-bottom:16px;}
+.row-2-1{grid-template-columns:2fr 1fr;}
+.row-2{grid-template-columns:1fr 1fr;}
+.row-3{grid-template-columns:1fr 1fr 1fr;}
+.row-1{grid-template-columns:1fr;}
+.chart-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;padding:22px 24px;
+}
+.chart-label{
+  font-size:10px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:0.1em;font-family:var(--font-mono);margin-bottom:16px;
+  display:flex;align-items:center;gap:8px;
+}
+.chart-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.chart-wrap{position:relative;width:100%;}
+
+/* ── LEGEND ── */
+.leg{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;font-size:11px;color:var(--muted);}
+.leg span{display:flex;align-items:center;gap:5px;}
+.leg-sq{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+
+/* ── BAR CHART (regional) ── */
+.bar-rows{margin-top:4px;}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.bar-lbl{font-size:11px;color:var(--muted);font-family:var(--font-mono);width:82px;text-align:right;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bar-track{flex:1;background:rgba(255,255,255,0.05);border-radius:3px;height:8px;}
+.bar-fill{height:8px;border-radius:3px;transition:width 0.8s cubic-bezier(.16,1,.3,1);}
+.bar-val{font-size:11px;font-family:var(--font-mono);color:var(--text);width:60px;}
+
+/* ── TABLE ── */
+.data-table{width:100%;border-collapse:collapse;font-size:13px;}
+.data-table th{font-size:10px;color:var(--muted);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;font-weight:500;}
+.data-table td{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text);}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:rgba(79,142,247,0.04);}
+.badge{font-size:10px;padding:2px 8px;border-radius:20px;font-family:var(--font-mono);font-weight:500;}
+.badge-blue{background:rgba(79,142,247,0.12);color:#7eb3fb;}
+.badge-green{background:rgba(52,217,165,0.12);color:var(--success);}
+.badge-amber{background:rgba(247,147,79,0.12);color:var(--accent3);}
+
+/* ── NO DATA ── */
+.no-data{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
+
+/* ── ERROR ── */
+.error-box{
+  background:rgba(240,95,95,0.08);border:1px solid rgba(240,95,95,0.25);
+  border-radius:14px;padding:20px 24px;margin:20px 0;color:var(--danger);font-size:14px;
+}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:32px;right:32px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:14px 20px;font-size:13px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);display:none;z-index:999;
+  font-family:var(--font-mono);max-width:320px;
+}
+#toast.show{display:block;animation:fadeUp 0.3s ease;}
+#toast.success{border-color:rgba(52,217,165,0.3);color:var(--success);}
+#toast.error{border-color:rgba(240,95,95,0.3);color:var(--danger);}
+
+@media(max-width:900px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .row-2-1,.row-2,.row-3{grid-template-columns:1fr;}
+  #dashboard{padding:16px;}
+  .topbar{padding:14px 16px;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">sales<span>.</span>analytics</div>
+  <div class="dataset-badge" id="top-badge" style="display:none">
+    <span class="dot"></span>
+    <span id="top-fname">—</span>
+  </div>
+</div>
+
+<!-- UPLOAD SECTION -->
+<div id="upload-section">
+  <div class="upload-eyebrow">Dynamic Sales Dashboard</div>
+  <h1 class="upload-title">Drop your dataset,<br/><span>see it come alive</span></h1>
+  <p class="upload-sub">Upload any Excel or CSV file with sales data. The dashboard auto-detects your columns and builds every visualization instantly — no configuration needed.</p>
+
+  <div class="drop-zone" id="drop-zone">
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv"/>
+    <div class="drop-icon">📊</div>
+    <div class="drop-main">Drag & drop your dataset here</div>
+    <div class="drop-sub">or <b onclick="document.getElementById('file-input').click()">browse files</b></div>
+  </div>
+
+  <div class="format-pills">
+    <div class="pill">.xlsx</div>
+    <div class="pill">.xls</div>
+    <div class="pill">.csv</div>
+  </div>
+
+  <div id="upload-progress">
+    <div class="prog-label" id="prog-label">Uploading...</div>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="dash-header">
+    <div>
+      <div class="dash-title" id="dash-title">Sales Performance</div>
+      <div class="dash-meta" id="dash-meta">—</div>
+    </div>
+    <div class="header-actions">
+      <div class="filters">
+        <select class="filter-select" id="f-year" onchange="applyFilters()"><option value="all">All years</option></select>
+        <select class="filter-select" id="f-region" onchange="applyFilters()"><option value="all">All regions</option></select>
+      </div>
+      <button class="upload-btn">
+        <input type="file" id="file-input-dash" accept=".xlsx,.xls,.csv"/>
+        ↑ Change dataset
+      </button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi" style="--accent-kpi:var(--accent)">
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value" id="kv-rev">—</div>
+      <div class="kpi-sub" id="ks-rev">—</div>
+    </div>
+    <div class="kpi" style="--accent-kpi:var(--accent2)">
+      <div class="kpi-label">Total Orders</div>
+      <div class="kpi-value" id="kv-ord">—</div>
+      <div class="kpi-sub" id="ks-ord">—</div>
+    </div>
+    <div class="kpi" style="--accent-kpi:var(--accent3)">
+      <div class="kpi-label">Total Profit</div>
+      <div class="kpi-value" id="kv-prof">—</div>
+      <div class="kpi-sub" id="ks-prof">—</div>
+    </div>
+    <div class="kpi" style="--accent-kpi:var(--accent4)">
+      <div class="kpi-label">Avg Order Value</div>
+      <div class="kpi-value" id="kv-aov">—</div>
+      <div class="kpi-sub" id="ks-aov">—</div>
+    </div>
+  </div>
+
+  <!-- Row 1 -->
+  <div class="row row-2-1">
+    <div class="chart-card">
+      <div class="chart-label">Monthly Revenue Trend</div>
+      <div class="leg" id="leg-trend"></div>
+      <div class="chart-wrap" style="height:240px"><canvas id="c-trend"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">Revenue by Category</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="c-cat"></canvas></div>
+      <div class="leg" id="leg-cat" style="margin-top:10px;justify-content:center;"></div>
+    </div>
+  </div>
+
+  <!-- Row 2 -->
+  <div class="row row-2">
+    <div class="chart-card">
+      <div class="chart-label">Revenue by Region</div>
+      <div class="bar-rows" id="region-bars"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">Customer Segment</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="c-seg"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Row 3 -->
+  <div class="row row-3">
+    <div class="chart-card">
+      <div class="chart-label">Quarterly Revenue</div>
+      <div class="leg" id="leg-qtr"></div>
+      <div class="chart-wrap" style="height:200px"><canvas id="c-qtr"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">Ship Mode Split</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="c-ship"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">Profit vs Revenue</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="c-profit"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Row 4 -->
+  <div class="row row-2">
+    <div class="chart-card">
+      <div class="chart-label">Top Customers</div>
+      <table class="data-table" id="t-customers"><thead><tr><th>#</th><th>Customer</th><th>Revenue</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">Top States / Provinces</div>
+      <div class="bar-rows" id="state-bars"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ── GLOBALS ──────────────────────────────────────────────────────────
+const PALETTE = ['#4f8ef7','#34d9a5','#f7934f','#b97af7','#f7cf4f','#f05f9e','#4fc8f7','#a5e070'];
+let DATA = null;
+let CHARTS = {};
+
+// ── INIT WITH SERVER DATA ─────────────────────────────────────────────
+const _serverData = {{ data|safe }};
+if (_serverData) {
+  if (_serverData.error) showError(_serverData.error);
+  else { DATA = _serverData; showDashboard(_serverData); }
+}
+const _fname = "{{ filename or '' }}";
+if (_fname) { document.getElementById('top-badge').style.display='flex'; document.getElementById('top-fname').textContent=_fname; }
+
+// ── DRAG & DROP ───────────────────────────────────────────────────────
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+document.getElementById('file-input').addEventListener('change', e => handleFile(e.target.files[0]));
+document.getElementById('file-input-dash').addEventListener('change', e => handleFile(e.target.files[0]));
+
+function handleFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx','xls','csv'].includes(ext)) { showToast('Unsupported file. Use .xlsx, .xls, or .csv', 'error'); return; }
+  showProgress(file.name);
+  const fd = new FormData();
+  fd.append('file', file);
+  fetch('/upload', { method:'POST', body:fd })
+    .then(r => r.json())
+    .then(res => {
+      hideProgress();
+      if (res.error) { showToast('Error: '+res.error, 'error'); return; }
+      DATA = res.data;
+      document.getElementById('top-badge').style.display = 'flex';
+      document.getElementById('top-fname').textContent = res.filename;
+      showDashboard(res.data);
+      showToast('✓ Dataset loaded: '+res.filename, 'success');
+    })
+    .catch(err => { hideProgress(); showToast('Upload failed: '+err, 'error'); });
+}
+
+// ── PROGRESS ──────────────────────────────────────────────────────────
+function showProgress(name) {
+  document.getElementById('upload-progress').style.display = 'block';
+  document.getElementById('prog-label').textContent = 'Processing ' + name + '...';
+  let w = 0;
+  window._progTimer = setInterval(() => { w = Math.min(w + Math.random()*18, 85); document.getElementById('prog-fill').style.width = w+'%'; }, 150);
+}
+function hideProgress() {
+  clearInterval(window._progTimer);
+  document.getElementById('prog-fill').style.width = '100%';
+  setTimeout(() => { document.getElementById('upload-progress').style.display = 'none'; document.getElementById('prog-fill').style.width = '0%'; }, 500);
+}
+
+// ── SHOW DASHBOARD ────────────────────────────────────────────────────
+function showDashboard(d) {
+  document.getElementById('upload-section').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  populateFilters(d);
+  renderAll(d);
+}
+
+function populateFilters(d) {
+  const yf = document.getElementById('f-year');
+  yf.innerHTML = '<option value="all">All years</option>';
+  (d.years||[]).forEach(y => { const o=document.createElement('option'); o.value=y; o.textContent=y; yf.appendChild(o); });
+
+  const rf = document.getElementById('f-region');
+  rf.innerHTML = '<option value="all">All regions</option>';
+  Object.keys(d.by_region||{}).forEach(r => { const o=document.createElement('option'); o.value=r; o.textContent=r; rf.appendChild(o); });
+}
+
+function applyFilters() {
+  if (!DATA) return;
+  const yr  = document.getElementById('f-year').value;
+  const reg = document.getElementById('f-region').value;
+  // For year filter, rebuild monthly/quarterly from selected year data
+  let d = Object.assign({}, DATA);
+  if (yr !== 'all' && d.monthly) {
+    d = Object.assign({}, DATA, {
+      total_revenue: (DATA.monthly[yr]||[]).reduce((a,b)=>a+b,0),
+      monthly: { [yr]: DATA.monthly[yr]||[] },
+      quarterly: { [yr]: DATA.quarterly[yr]||[] }
+    });
+  }
+  renderAll(d);
+}
+
+// ── RENDER ALL ────────────────────────────────────────────────────────
+function renderAll(d) {
+  updateKPIs(d);
+  buildTrend(d);
+  buildDonut('c-cat', Object.keys(d.by_category||{}), Object.values(d.by_category||{}), 'leg-cat');
+  buildRegionBars(d);
+  buildSegment(d);
+  buildQuarterly(d);
+  buildShip(d);
+  buildProfit(d);
+  buildCustomerTable(d);
+  buildStateBars(d);
+  updateMeta(d);
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────
+function fmt(v){ return v>=1000000 ? '$'+(v/1000000).toFixed(2)+'M' : v>=1000 ? '$'+(v/1000).toFixed(1)+'K' : '$'+Math.round(v).toLocaleString(); }
+
+function updateKPIs(d) {
+  document.getElementById('kv-rev').textContent = fmt(d.total_revenue||0);
+  document.getElementById('ks-rev').textContent = d.yoy!=null ? (d.yoy>=0?'▲':'▼')+' '+Math.abs(d.yoy)+'% vs prior year' : 'All-time revenue';
+  document.getElementById('ks-rev').className = 'kpi-sub '+(d.yoy>=0?'up':'down');
+
+  document.getElementById('kv-ord').textContent = (d.total_orders||0).toLocaleString();
+  document.getElementById('ks-ord').textContent = d.total_quantity!=null ? d.total_quantity.toLocaleString()+' units sold' : 'unique orders';
+
+  if (d.total_profit!=null) {
+    document.getElementById('kv-prof').textContent = fmt(d.total_profit);
+    document.getElementById('ks-prof').textContent = (d.profit_margin||0)+'% profit margin';
+    document.getElementById('ks-prof').className = 'kpi-sub '+(d.total_profit>=0?'up':'down');
+  } else {
+    document.getElementById('kv-prof').textContent = 'N/A';
+    document.getElementById('ks-prof').textContent = 'No profit column detected';
+  }
+
+  document.getElementById('kv-aov').textContent = fmt(d.aov||0);
+  document.getElementById('ks-aov').textContent = d.avg_discount!=null ? 'Avg discount: '+d.avg_discount+'%' : 'per order avg';
+}
+
+// ── META ──────────────────────────────────────────────────────────────
+function updateMeta(d) {
+  document.getElementById('dash-meta').textContent = d.rows+' rows · '+d.col_names.length+' columns · Years: '+(d.years&&d.years.length?d.years.join(', '):'N/A');
+}
+
+// ── CHART HELPERS ─────────────────────────────────────────────────────
+function destroyChart(id) { if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
+
+function buildTrend(d) {
+  destroyChart('trend');
+  const m = d.monthly||{};
+  const years = Object.keys(m);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const leg = document.getElementById('leg-trend');
+  leg.innerHTML = years.map((y,i)=>`<span><span class="leg-sq" style="background:${PALETTE[i]}"></span>${y}</span>`).join('');
+  const datasets = years.map((y,i)=>({
+    label:y, data:m[y], borderColor:PALETTE[i],
+    backgroundColor:i===0?hexAlpha(PALETTE[i],0.08):'transparent',
+    fill:i===0, tension:0.35, pointRadius:3, borderWidth:2,
+    borderDash:i===0?[]:[5,4], pointBackgroundColor:PALETTE[i]
+  }));
+  const ctx = document.getElementById('c-trend').getContext('2d');
+  CHARTS['trend'] = new Chart(ctx, {
+    type:'line', data:{labels:months,datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmt(c.parsed.y)}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#6b7280',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>fmt(v),color:'#6b7280',font:{size:10}}}}}
+  });
+}
+
+function buildDonut(canvasId, labels, values, legId) {
+  destroyChart(canvasId);
+  if (!labels.length) return;
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  const total = values.reduce((a,b)=>a+b,0);
+  CHARTS[canvasId] = new Chart(ctx, {
+    type:'doughnut',
+    data:{labels,datasets:[{data:values,backgroundColor:PALETTE.slice(0,labels.length),borderWidth:2,borderColor:'#181c25'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.label+': '+fmt(c.parsed)+' ('+((c.parsed/total)*100).toFixed(1)+'%)'}}}
+    }
+  });
+  if (legId) {
+    document.getElementById(legId).innerHTML = labels.map((l,i)=>{
+      const pct = total>0?((values[i]/total)*100).toFixed(1):'0';
+      return `<span><span class="leg-sq" style="background:${PALETTE[i]}"></span>${l} ${pct}%</span>`;
+    }).join('');
+  }
+}
+
+function buildRegionBars(d) {
+  const data = d.by_region||{};
+  const el = document.getElementById('region-bars');
+  if (!Object.keys(data).length) { el.innerHTML='<div class="no-data">No region data detected</div>'; return; }
+  const max = Math.max(...Object.values(data));
+  el.innerHTML = Object.entries(data).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>
+    `<div class="bar-row">
+      <div class="bar-lbl" title="${k}">${k}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${max>0?(v/max*100).toFixed(1):0}%;background:${PALETTE[i%PALETTE.length]}"></div></div>
+      <div class="bar-val">${fmt(v)}</div>
+    </div>`
+  ).join('');
+}
+
+function buildSegment(d) {
+  destroyChart('seg');
+  const data = d.by_segment||{};
+  if (!Object.keys(data).length) return;
+  const ctx = document.getElementById('c-seg').getContext('2d');
+  CHARTS['seg'] = new Chart(ctx,{
+    type:'bar',
+    data:{labels:Object.keys(data),datasets:[{data:Object.values(data),backgroundColor:PALETTE.slice(0,Object.keys(data).length)}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.parsed.y)}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#6b7280',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>fmt(v),color:'#6b7280',font:{size:10}}}}}
+  });
+}
+
+function buildQuarterly(d) {
+  destroyChart('qtr');
+  const m = d.quarterly||{};
+  const years = Object.keys(m);
+  const leg = document.getElementById('leg-qtr');
+  leg.innerHTML = years.map((y,i)=>`<span><span class="leg-sq" style="background:${PALETTE[i]}"></span>${y}</span>`).join('');
+  const ctx = document.getElementById('c-qtr').getContext('2d');
+  CHARTS['qtr'] = new Chart(ctx,{
+    type:'bar',
+    data:{labels:['Q1','Q2','Q3','Q4'],datasets:years.map((y,i)=>({label:y,data:m[y],backgroundColor:PALETTE[i]}))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmt(c.parsed.y)}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#6b7280',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>fmt(v),color:'#6b7280',font:{size:10}}}}}
+  });
+}
+
+function buildShip(d) {
+  destroyChart('ship');
+  const data = d.by_ship||{};
+  if (!Object.keys(data).length) return;
+  const ctx = document.getElementById('c-ship').getContext('2d');
+  CHARTS['ship'] = new Chart(ctx,{
+    type:'pie',
+    data:{labels:Object.keys(data),datasets:[{data:Object.values(data),backgroundColor:PALETTE.slice(0,Object.keys(data).length),borderWidth:2,borderColor:'#181c25'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{color:'#9ca3af',font:{size:11},padding:12}},
+      tooltip:{callbacks:{label:c=>' '+c.label+': '+fmt(c.parsed)}}}}
+  });
+}
+
+function buildProfit(d) {
+  destroyChart('profit');
+  const cats = Object.keys(d.by_category||{});
+  if (!cats.length || !d.total_profit) return;
+  const revVals = cats.map(c=>(d.by_category||{})[c]||0);
+  const profVals = cats.map(c=>(d.profit_by_cat||{})[c]||0);
+  const ctx = document.getElementById('c-profit').getContext('2d');
+  CHARTS['profit'] = new Chart(ctx,{
+    type:'bar',
+    data:{labels:cats,datasets:[
+      {label:'Revenue',data:revVals,backgroundColor:'#4f8ef7'},
+      {label:'Profit',data:profVals,backgroundColor:'#34d9a5'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{color:'#9ca3af',font:{size:11},padding:10}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmt(c.parsed.y)}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#6b7280',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>fmt(v),color:'#6b7280',font:{size:10}}}}}
+  });
+}
+
+function buildCustomerTable(d) {
+  const data = d.by_customer||{};
+  const tbody = document.querySelector('#t-customers tbody');
+  const entries = Object.entries(data).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  const badges = ['badge-blue','badge-green','badge-amber'];
+  tbody.innerHTML = entries.length
+    ? entries.map(([name,rev],i)=>`<tr><td>${i+1}</td><td>${name}</td><td><strong>${fmt(rev)}</strong></td></tr>`).join('')
+    : '<tr><td colspan="3" class="no-data">No customer data detected</td></tr>';
+}
+
+function buildStateBars(d) {
+  const data = d.by_state||{};
+  const el = document.getElementById('state-bars');
+  const entries = Object.entries(data).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  if (!entries.length) { el.innerHTML='<div class="no-data">No state/province data detected</div>'; return; }
+  const max = entries[0][1];
+  el.innerHTML = entries.map(([k,v],i)=>
+    `<div class="bar-row">
+      <div class="bar-lbl" title="${k}">${k}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${max>0?(v/max*100).toFixed(1):0}%;background:${PALETTE[i%PALETTE.length]}"></div></div>
+      <div class="bar-val">${fmt(v)}</div>
+    </div>`
+  ).join('');
+}
+
+// ── UTILITIES ─────────────────────────────────────────────────────────
+function hexAlpha(hex, a) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show '+(type||'');
+  setTimeout(()=>t.className='', 3500);
+}
+
+function showError(msg) {
+  document.getElementById('upload-section').innerHTML += `<div class="error-box">⚠ ${msg}</div>`;
+}
+</script>
+</body>
+</html>
